@@ -1,0 +1,13 @@
+apiVersion: metallb.io/v1beta1
+kind: BGPAdvertisement
+metadata:
+  name: first-adv
+  namespace: metallb-system
+spec:
+  ipAddressPools:
+    - first-pool
+  peers:
+    - frrviavrf
+  nodeSelectors:
+    - matchLabels:
+        egress-service.k8s.ovn.org/test-server1: ""

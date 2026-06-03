@@ -1,0 +1,87 @@
+apiVersion: nmstate.io/v1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: nncp-vlan100-vrf
+spec:
+  nodeSelector: 
+    vrf: "true"
+  # applying an nncp takes a node offline for up to a few minutes 
+  # maxUnavailable limits the number k8s will take offline to apply this nccp to at a time, to limit impact on running workloads:
+  # maxUnavailable: 3
+  desiredState:
+    interfaces:
+      # Note we are avoiding applying changes to the base ethernet interface from this nncp
+      # VLAN interface on physical NIC
+      - name: vlan100
+        # Note: Red Hat documented example demonstrates this with the VRF attached to ethernet, without the vlan
+        # type: ethernet
+        type: vlan
+        state: up
+        vlan:
+          base-iface: enp1s0
+          id: 100
+        ipv4:
+          enabled: true
+          dhcp: false
+          address:
+            - ip: 10.2.100.253
+              prefix-length: 24
+      # VRF (where bridge is used, vrf comes after bridge) 
+      - name: vrf100
+        type: vrf
+        state: up
+        vrf:
+          port:
+            - vlan100
+          route-table-id: 100
+    routes:
+      config:
+        # Default route to apply to vrf-100
+        - destination: 0.0.0.0/0
+          next-hop-address: 10.2.100.254
+          next-hop-interface: vlan100
+          table-id: 100
+        # Additional routes as required
+        # - destination: 10.2.100.0/24
+        #   next-hop-address: 10.2.100.254
+        #   next-hop-interface: vlan100
+        #   table-id: 100
+        #
+
+    route-rules:
+      config:
+        # Routing table choice override:
+        # HERE BE DRAGONS
+        # - priority: 1000
+        #   ip-to: 10.2.100.0/24
+        #   route-table: 10 
+        # Note: Red Hat doco does NOT instruct to define/change this, as multiple things manage 
+        # the route policy (choice of which route table to use for all packets) and it is common to all networking on the node.
+        # To interogate the table run on node: ip rule show
+        # route-table yaml field is the desired id of the table in route rule show.
+        # While a vrf creates a rule with that id on that table:
+        # ip rule show |grep "^100:"
+        # 100:    from all to 10.2.100.0/24 lookup 100 proto static
+        # Some mechanisms like multus auto-populate their own routing tables in there whose route id may have other ideas
+        # ip rule |grep l3mdev # l3mdev is a Level 3 topology multus device
+        # 1000:   from all lookup [l3mdev-table]
+        # Note2: the priority number goes into the rule and lower numbers are selected first
+        # so broad override should probably be higher than the three musketeers below to avoid misrouting built-in cluster networks.
+        # 
+        # Red Hat explicitly requests in its doco to hard-define the ranges below to always go to the default routing table 254.
+        # Example: https://docs.redhat.com/en/documentation/openshift_container_platform/4.21/html-single/ingress_and_load_balancing/index#nw-metallb-configure-return-traffic-proc_metallb-configure-return-traffic
+        # "The Three Musketeers" - the three ranges - cluster pod network, cluster service network and internal masquerade
+        # Note: the below have been adjusted from 10.132.0.0 (red hat doco) to the pod network cidir used in lab clusters
+        # as the doco requires, using information from oc describe network.operator/cluster
+        - ip-to: 172.30.0.0/16
+          priority: 998
+          route-table: 254
+        - ip-to: 10.128.0.0/14
+          priority: 998
+          route-table: 254
+        - ip-to: 169.254.0.0/17
+          priority: 998
+          route-table: 254
+
+
+

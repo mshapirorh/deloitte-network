@@ -1,0 +1,55 @@
+---
+# EgressService object
+# Red Hat Doco Validated
+# https://docs.redhat.com/en/documentation/openshift_container_platform/4.21/html-single/ingress_and_load_balancing/index#nw-metallb-configure-return-traffic-proc_metallb-configure-return-traffic
+apiVersion: k8s.ovn.org/v1
+kind: EgressService
+metadata:
+  name: egressservice-t1ns11
+  namespace: t1ns11
+spec:
+  sourceIPBy: "LoadBalancerIP"
+  nodeSelector:
+    matchLabels:
+      vrf: "true"
+  network: "100"
+
+# Heads Up: 
+# This doesn't Work: (sourceIPBy: "Network" documented in upstream k8s but not used in OpenShift)
+# ---
+#apiVersion: k8s.ovn.org/v1
+#kind: EgressService
+#metadata:
+#  name: egser-ubipod
+#  namespace: t1ns11
+#spec:
+#  sourceIPBy: "Network"
+#  nodeSelector:
+#    matchLabels:
+#      vrf: "true"
+#  network: "100"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: service
+  namespace: t1ns1
+  annotations:
+    metallb.universe.tf/address-pool: ippool-tti
+  labels:
+    app: app-ubipod
+spec:
+  type: LoadBalancer
+  selector:
+    app: app-ubipod
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 80
+  sessionAffinity: None
+  selector:
+    app: app-ubipod

@@ -1,0 +1,21 @@
+---
+# Verified from Red Hat Doco
+# https://docs.redhat.com/en/documentation/openshift_container_platform/4.21/html/virtualization/networking#virt-connecting-vm-to-secondary-udn
+apiVersion: k8s.ovn.org/v1
+kind: ClusterUserDefinedNetwork
+metadata:
+  name: cudn-ipam-off-vlan100
+spec:
+  namespaceSelector: {}
+  network:
+    topology: Localnet
+    localnet:
+      role: Secondary
+      # physicalNetworkName MUST match what we have in spec.desiredState.ovn.bridge-mappings[].localnet field in nncp 
+      physicalNetworkName: localnet-trunk
+      ipam:
+        mode: Disabled
+      vlan:
+        mode: Access
+        access:
+          id: 100

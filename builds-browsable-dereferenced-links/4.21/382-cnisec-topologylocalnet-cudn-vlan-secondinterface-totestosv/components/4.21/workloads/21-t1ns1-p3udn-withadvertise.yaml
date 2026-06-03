@@ -1,0 +1,24 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: t1ns1
+  labels:
+    # For Primary uncomment this:
+    k8s.ovn.org/primary-user-defined-network: ""
+---
+apiVersion: k8s.ovn.org/v1
+kind: UserDefinedNetwork
+metadata:
+  name: udn100
+  namespace: t1ns1
+spec:
+  topology: Layer3
+  layer3:
+    role: Primary
+    subnets:
+      - cidr: "10.2.101.0/24"
+        hostSubnet: 25
+  # do we expect traffic to go out of the cluster and for metallb to advertise routes?
+  routeAdvertisements:
+    enabled: true

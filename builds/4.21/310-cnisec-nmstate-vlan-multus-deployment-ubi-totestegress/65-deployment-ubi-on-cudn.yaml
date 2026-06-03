@@ -1,0 +1,20 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dp-t1ns1-ubipod-reference
+  namespace: t1ns1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: app-ubipod
+  template:
+    metadata:
+      labels:
+        app: app-ubipod
+    spec:
+      containers:
+        - name: container-ubipod
+          image: registry.access.redhat.com/ubi9/ubi
+          command: ["sleep", "infinity"]

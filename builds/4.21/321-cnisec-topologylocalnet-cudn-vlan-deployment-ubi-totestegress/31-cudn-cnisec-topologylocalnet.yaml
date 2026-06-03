@@ -1,0 +1,53 @@
+---
+# Verified against Red Hat documentation:
+# https://docs.redhat.com/en/documentation/openshift_container_platform/4.21/html/multiple_networks/primary-networks#nw-udn-additional-config-details_user-defined-networks
+apiVersion: k8s.ovn.org/v1
+kind: ClusterUserDefinedNetwork
+metadata:
+  name: cudn-ipam-on-vlan100
+spec:
+  namespaceSelector:
+    matchLabels:
+      vlantesting: "100"
+      ipam: "with"
+  network:
+    topology: Localnet
+    localnet:
+      # physicalNetworkName MUST match what we have in spec.desiredState.ovn.bridge-mappings[].localnet field in nncp 
+      physicalNetworkName: localnet-trunk
+      role: Secondary
+      ipam: 
+        # To make the pod obtain an IP from the cluster uncomment the latter two:
+        # mode: Disabled
+        mode: Enabled
+        lifecycle: Persistent
+      subnets: 
+        - 10.2.100.128/25
+      vlan:
+        mode: Access
+        access:
+          id: 100
+---
+# Verified against Red Hat documentation:
+# https://docs.redhat.com/en/documentation/openshift_container_platform/4.21/html/multiple_networks/primary-networks#nw-udn-additional-config-details_user-defined-networks
+apiVersion: k8s.ovn.org/v1
+kind: ClusterUserDefinedNetwork
+metadata:
+  name: cudn-ipam-off-vlan100
+spec:
+  namespaceSelector:
+    matchLabels:
+      vlantesting: "100"
+      ipam: "without"
+  network:
+    topology: Localnet
+    localnet:
+      # physicalNetworkName MUST match what we have in spec.desiredState.ovn.bridge-mappings[].localnet field in nncp 
+      physicalNetworkName: localnet-trunk
+      role: Secondary
+      ipam: 
+        mode: Disabled
+      vlan:
+        mode: Access
+        access:
+          id: 100

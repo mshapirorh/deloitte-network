@@ -1,0 +1,34 @@
+# This will map a localnet directly into the existing primary bridge
+# Useful for localnet mapping to OSV
+# Validated from Red Hat documentation:
+# https://docs.redhat.com/en/documentation/openshift_container_platform/4.21/html-single/multiple_networks/multiple_networks#configuration-localnet-switched-topology_configuring-additional-network-ovnk
+# https://docs.redhat.com/en/documentation/openshift_container_platform/4.21/html/virtualization/networking#virt-connecting-vm-to-secondary-udn
+---
+apiVersion: nmstate.io/v1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: nncp-secondphysicalnic-ovsbridge-bridgemapping
+spec:
+  nodeSelector: {}
+  desiredState:
+    interfaces:
+    - name: bridge-ovs-link2-ext
+      description: |-
+        A dedicated OVS bridge with the physical nic as a port
+        passing all VLANs and untagged traffic
+      type: ovs-bridge
+      state: up
+      bridge:
+        allow-extra-patch-ports: true
+        options:
+          stp: false
+          mcast-snooping-enable: true
+        port:
+        # Replace with bond or alternative name of physical interface on the node:
+        - name: enp1s0
+    ovn:
+      bridge-mappings:
+        - bridge: bridge-ovs-link2-ext
+          # the below label has to match the name in the cudn object
+          localnet: localnet-trunk
+          state: present

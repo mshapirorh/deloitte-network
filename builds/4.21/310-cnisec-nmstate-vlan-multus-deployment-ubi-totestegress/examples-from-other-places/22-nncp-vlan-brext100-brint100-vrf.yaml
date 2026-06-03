@@ -1,0 +1,68 @@
+# Network object configuration (Required when using VLANs)
+# Red Hat Doco Validated:
+# https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html-single/ingress_and_load_balancing/configuring-routes?utm_source=chatgpt.com#nw-enabling-ip-forwarding-specific-interface_about-advertising-ip-address-pool
+# ... "From OpenShift Container Platform 4.14 the default network behavior is to not allow forwarding of IP packets between network interfaces."
+# 
+apiVersion: operator.openshift.io/v1
+kind: Network
+metadata:
+  name: cluster
+spec:
+  defaultNetwork:
+    ovnKubernetesConfig:
+      gatewayConfig:
+        routingViaHost: true
+---
+apiVersion: nmstate.io/v1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: nncp-vlan-bridge-vrf-100
+spec:
+  nodeSelector: {}
+  desiredState:
+    interfaces:
+      # VLAN interface on physical NIC
+      - name: vlan-100
+        type: vlan
+        state: up
+        vlan:
+          base-iface: enp1s0
+          id: 100
+      - name: bridge-100ext
+        state: up
+        type: linux-bridge
+        bridge:
+          port:
+          - name: vlan-100
+          options:
+            stp:
+              enabled: false
+        ipv4:
+          enabled: true
+          dhcp: false
+          address:
+            - ip: 10.2.100.101
+              prefix-length: 24
+      - name: bridge-100int
+        state: up
+        type: linux-bridge
+        bridge:
+          options:
+            stp:
+              enabled: false
+        ipv4:
+          enabled: true
+          dhcp: false
+          address:
+            - ip: 10.2.101.101
+              prefix-length: 24
+      - name: vrf-100
+        type: vrf
+        state: up
+        vrf:
+          # The vrf is a routing table in service of routing between the two L3 networks on the below bridges:
+          port:
+            - bridge-100ext
+            - bridge-100int
+          # Must be < 1000 on OpenShift
+          route-table-id: 100

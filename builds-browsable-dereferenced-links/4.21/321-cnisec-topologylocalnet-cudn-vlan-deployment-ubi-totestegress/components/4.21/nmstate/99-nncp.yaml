@@ -1,0 +1,21 @@
+apiVersion: nmstate.io/v1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: nncp-bond-data-lacp
+spec:
+  nodeSelector: {}
+  desiredState:
+   interfaces:
+    - name: bond-data-lacp
+      description: LACP Bond for Eno6 and Eno7 for Data traffic
+      type: bond
+      state: up
+      mtu: 9000
+      link-aggregation:
+        mode: 802.3ad
+        options:
+          miimon: "100"
+          lacp_rate: "fast"
+        port:
+          - eno7
+          - eno6

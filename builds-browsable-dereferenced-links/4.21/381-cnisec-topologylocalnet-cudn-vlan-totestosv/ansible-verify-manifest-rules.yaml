@@ -1,0 +1,147 @@
+---
+- name: Validate OpenShift object relationships
+  hosts: localhost
+  gather_facts: false
+
+  collections:
+    - community.general
+
+  vars_files:
+    - manifest-rules.yaml
+
+  tasks:
+
+    # ------------------------------------------------------------
+    # Ensure required dependency exists (jmespath)
+    # ------------------------------------------------------------
+    - name: Verify jmespath is installed
+      command: python3 -c "import jmespath"
+      changed_when: false
+      failed_when: false
+      register: jmespath_check
+
+    - name: Fail if jmespath is missing
+      fail:
+        msg: |
+          Missing dependency: python3-jmespath
+      when: jmespath_check.rc != 0
+
+
+    # ------------------------------------------------------------
+    # Discover YAML manifests (numbered files only)
+    # ------------------------------------------------------------
+    - name: Get manifest files
+      set_fact:
+        object_manifest_files: >-
+          {{
+            lookup('fileglob', playbook_dir ~ '/[0-9]*.y*ml', wantlist=True)
+            | sort
+          }}
+
+
+    # ------------------------------------------------------------
+    # Load all YAML objects + attach source file metadata
+    # ------------------------------------------------------------
+    - name: Build object list with source tracking
+      set_fact:
+        objects: >-
+          {{
+            objects | default([])
+            +
+            (
+              lookup('file', item)
+              | from_yaml_all
+              | select('mapping')
+              | map('combine', {'__source_file': item})
+              | list
+            )
+          }}
+      loop: "{{ object_manifest_files }}"
+      loop_control:
+        label: "{{ item | basename }}"
+
+
+    # ------------------------------------------------------------
+    # Validate each rule
+    # ------------------------------------------------------------
+    - name: Validate match rules
+      loop: "{{ ensureMatch }}"
+      loop_control:
+        label: "{{ item.description }}"
+
+      vars:
+
+        # ----------------------------
+        # Find left object
+        # ----------------------------
+        left_matches: >-
+          {{
+            objects
+            | selectattr('kind', 'equalto', item.match[0].kind)
+            | selectattr('metadata.name', 'equalto', item.match[0].name)
+            | list
+          }}
+
+        left_obj: "{{ left_matches[0] if left_matches | length > 0 else none }}"
+
+
+        # ----------------------------
+        # Find right object
+        # ----------------------------
+        right_matches: >-
+          {{
+            objects
+            | selectattr('kind', 'equalto', item.match[1].kind)
+            | selectattr('metadata.name', 'equalto', item.match[1].name)
+            | list
+          }}
+
+        right_obj: "{{ right_matches[0] if right_matches | length > 0 else none }}"
+
+
+        # ----------------------------
+        # Extract values safely
+        # ----------------------------
+        left_value: >-
+          {{
+            (left_obj | community.general.json_query(item.match[0].key))
+            if left_obj is not none else none
+          }}
+
+        right_value: >-
+          {{
+            (right_obj | community.general.json_query(item.match[1].key))
+            if right_obj is not none else none
+          }}
+
+
+      # ----------------------------------------------------------
+      # Assertions (single task, no invalid block usage)
+      # ----------------------------------------------------------
+      assert:
+        that:
+          - left_obj is not none
+          - right_obj is not none
+          - left_value == right_value
+
+        success_msg: |
+          ✅ PASS: {{ item.description }}
+
+        fail_msg: |
+          ❌ FAIL: {{ item.description }}
+
+          LEFT:
+            file: {{ left_obj.__source_file | default('UNKNOWN') }}
+            objectkind: {{ item.match[0].kind }}
+            objectname: {{ item.match[0].name }}
+            key: {{ item.match[0].key }}
+            discoveredvalue: {{ left_value }}
+
+          < === TO === >
+          
+          RIGHT:
+            objectkind: {{ item.match[1].kind }}
+            objectname: {{ item.match[1].name }}
+            key: {{ item.match[1].key }}
+            file: {{ right_obj.__source_file | default('UNKNOWN') }}
+            discoveredvalue: {{ right_value }}

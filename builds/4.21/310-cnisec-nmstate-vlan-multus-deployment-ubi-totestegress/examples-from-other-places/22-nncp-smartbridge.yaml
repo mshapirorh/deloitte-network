@@ -1,0 +1,33 @@
+# Verified with Red Hat Documentation:
+# https://redhatquickcourses.github.io/ocp-virt-cookbook/ocp-virt-cookbook/1/networking/linux-bridges.html
+---
+apiVersion: nmstate.io/v1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: nncp-vlan-vrf-100
+spec:
+  nodeSelector: {}
+  desiredState:
+    interfaces:
+      # VLAN interface on physical NIC
+      - name: vlan-100
+        type: vlan
+        state: up
+        vlan:
+          base-iface: enp1s0
+          id: 100
+        ipv4:
+          enabled: true
+          dhcp: false
+          address:
+            - ip: 10.2.100.101
+              prefix-length: 24
+      - name: vrf-100
+        type: vrf
+        state: up
+        vrf:
+          # Attach the VLAN interface to this VRF
+          port:
+            - vlan-100
+          # Must be < 1000 on OpenShift
+          route-table-id: 100

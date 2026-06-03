@@ -1,0 +1,18 @@
+# This will map a localnet directly into the existing primary bridge
+# Useful for localnet mapping to OSV
+# Validated from Red Hat documentation:
+# https://docs.redhat.com/en/documentation/openshift_container_platform/4.21/html/virtualization/networking#virt-connecting-vm-to-secondary-udn
+---
+apiVersion: nmstate.io/v1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: nncp-bridgemapping
+spec:
+  nodeSelector: {}
+  desiredState:
+    ovn:
+      bridge-mappings:
+        - bridge: br-ex
+          # the below label has to match the name in the cudn object
+          localnet: localnet-trunk
+          state: present

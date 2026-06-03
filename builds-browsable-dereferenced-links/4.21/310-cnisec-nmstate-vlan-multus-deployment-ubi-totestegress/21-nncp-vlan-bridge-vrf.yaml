@@ -1,0 +1,43 @@
+---
+apiVersion: nmstate.io/v1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: nncp-vlan-bridge-vrf-100
+spec:
+  nodeSelector: {}
+  desiredState:
+    interfaces:
+      # VLAN interface on physical NIC
+      - name: vlan-100
+        type: vlan
+        state: up
+        vlan:
+          base-iface: enp1s0
+          id: 100
+      - name: bridge-100ext
+        state: up
+        type: linux-bridge
+        bridge:
+          port:
+          - name: vlan-100
+          options:
+            stp:
+              enabled: false
+        ipv4:
+          enabled: true
+          dhcp: false
+          address:
+            - ip: 10.2.100.101
+              prefix-length: 24
+      - name: vrf-100
+        type: vrf
+        state: absent
+        ipv4:
+          enabled: true
+        vrf:
+          # The vrf is a routing table in service of routing between the two L3 networks on the below bridges:
+          port:
+            - bridge-100ext
+            - bridge-100int
+          # Must be < 1000 on OpenShift
+          route-table-id: 100

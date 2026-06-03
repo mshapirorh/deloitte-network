@@ -1,0 +1,42 @@
+---
+apiVersion: k8s.ovn.org/v1
+kind: ClusterUserDefinedNetwork
+metadata:
+  name: cudn-ipam-on
+spec:
+  namespaceSelector:
+    matchLabels:
+      vlantesting: "without"
+      ipam: "with"
+  network:
+    topology: Localnet
+    localnet:
+      # physicalNetworkName MUST match what we have in spec.desiredState.ovn.bridge-mappings[].localnet field in nncp 
+      physicalNetworkName: localnet-trunk
+      role: Secondary
+      ipam: 
+        # To make the pod obtain an IP from the cluster uncomment the latter two:
+        # mode: Disabled
+        mode: Enabled
+        lifecycle: Persistent
+      subnets: 
+        - 10.2.0.128/25
+---
+apiVersion: k8s.ovn.org/v1
+kind: ClusterUserDefinedNetwork
+metadata:
+  name: cudn-ipam-off
+spec:
+  namespaceSelector:
+    matchLabels:
+      vlantesting: "without"
+      ipam: "without"
+  network:
+    topology: Localnet
+    localnet:
+      # physicalNetworkName MUST match what we have in spec.desiredState.ovn.bridge-mappings[].localnet field in nncp 
+      physicalNetworkName: localnet-trunk
+      role: Secondary
+      ipam: 
+        mode: Disabled
+        # Will need multus dhcp plugin, or dhclient in pod

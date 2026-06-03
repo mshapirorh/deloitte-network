@@ -1,0 +1,42 @@
+---
+ensureMatch:
+  - description: Ensure namespaces used in example are consistent
+    match:
+      - kind: Namespace
+        name: t1ns1
+        key: metadata.name
+      - kind: VirtualMachine
+        name: vm-windows10
+        key: metadata.namespace
+  - description: Ensures the ovs bridgemapping is to the secondary physical interface external bridge
+    match:
+      - kind: NodeNetworkConfigurationPolicy
+        name: nncp-secondphysicalnic-ovsbridge-bridgemapping
+        key: spec.desiredState.interfaces[0].name
+      - kind: NodeNetworkConfigurationPolicy
+        name: nncp-secondphysicalnic-ovsbridge-bridgemapping
+        key: spec.desiredState.ovn."bridge-mappings"[0].bridge
+  - description: Ensures the CUDN matches the bridge mapping
+    match:
+      - kind: NodeNetworkConfigurationPolicy
+        name: nncp-secondphysicalnic-ovsbridge-bridgemapping
+        key: spec.desiredState.ovn."bridge-mappings"[0].localnet
+      - kind: ClusterUserDefinedNetwork
+        name: cudn-ipam-off-vlan100
+        key: spec.network.localnet.physicalNetworkName
+  - description: Ensures the VM network configuration matches CUDN name
+    match:
+      - kind: ClusterUserDefinedNetwork
+        name: cudn-ipam-off-vlan100
+        key: metadata.name
+      - kind: VirtualMachine
+        name: vm-windows10
+        key: spec.template.spec.networks[0].multus.networkName
+  - description: Ensures the VM NIC maps to VM network
+    match:
+      - kind: VirtualMachine
+        name: vm-windows10
+        key: spec.template.spec.domain.devices.interfaces[0].name
+      - kind: VirtualMachine
+        name: vm-windows10
+        key: spec.template.spec.networks[0].name

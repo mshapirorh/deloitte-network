@@ -1,0 +1,122 @@
+apiVersion: nmstate.io/v1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: nncp-vlan100-vrf
+spec:
+  # nodeSelector: {}
+  nodeSelector:
+    node-role.kubernetes.io/worker: ""
+  desiredState:
+    interfaces:
+      # VLAN interface on physical NIC
+      - name: vlan100
+        type: vlan
+        state: up
+        vlan:
+          base-iface: enp1s0
+          id: 100
+
+      # br100
+      # - name: br100
+      #   type: linux-bridge
+      #   state: up
+      #   bridge:
+      #     options:
+      #       stp:
+      #         enabled: false
+      #     port:
+      #       - name: vlan100
+      #   ipv4:
+      #     enabled: true
+      #     address:
+      #       - ip: 10.2.100.254   
+      #         prefix-length: 24
+
+      # VRF (must come after br100 logically)
+      - name: vrf100
+        type: vrf
+        state: up
+        vrf:
+          port:
+            # Link the bridge instead of the VLAN to the vrf
+            # - vlan100
+            - br100
+          # table-id: 100
+          route-table-id: 100
+            # address:
+            #   - ip: 10.2.100.254
+            #     prefix-length: 24a
+
+    routes:
+      config:
+        - destination: 10.2.101.0/24
+          next-hop-address: 10.2.100.253
+          table-id: 100
+        # Override for default route:
+        # - destination: 0.0.0.0/0
+        #   next-hop-address: 10.2.100.1
+        #   next-hop-interface: br100
+
+
+  desiredState:
+
+
+
+      - name: br-ex
+        type: linux-bridge
+        state: up
+        bridge:
+          port:
+            - name: vrf100
+    interfaces:
+      - name: enp1s0
+        type: ethernet
+        state: up
+    ovn:
+      bridge-mappings:
+      - localnet: vlan100
+        bridge: br-ex
+        state: present
+
+
+
+
+apiVersion: nmstate.io/v1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: nncp-vlan100-vrf
+spec:
+  nodeSelector:
+    node-role.kubernetes.io/worker: ""
+  desiredState:
+    ovn:
+      bridge-mappings:
+      - localnet: vlan100
+        bridge: br-ex
+        state: present
+    interfaces:
+      - name: enp1s0
+        type: ethernet
+        state: up
+
+      - name: enp1s0.100
+        type: vlan
+        state: up
+        vlan:
+          base-iface: enp1s0
+          id: 100
+
+      - name: vrf100
+        type: vrf
+        state: up
+        vrf:
+          port:
+            - enp1s0.100
+          table-id: 100
+
+      - name: br-ex
+        type: linux-bridge
+        state: up
+        bridge:
+          port:
+            - name: vrf100

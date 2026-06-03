@@ -1,0 +1,104 @@
+---
+# IPAddresspool object configuration 
+# Red Hat Doco Validated:
+# https://docs.redhat.com/en/documentation/openshift_container_platform/4.21/html-single/ingress_and_load_balancing/index#load-balancing-with-metallb
+# https://docs.redhat.com/en/documentation/openshift_container_platform/4.21/html-single/ingress_and_load_balancing/index#nw-metallb-advertise-a-basic-address-pool-configuration-bgp_about-advertising-ip-address-pool
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: ippool-tti
+  namespace: metallb-system                                                   
+  labels:
+    zone: ippool-vlan100
+spec:
+  addresses:                                                                  
+  - 10.2.100.234-10.2.100.239
+---
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: ippool-general
+  namespace: metallb-system                                                   
+  labels:
+    zone: ippool-general
+spec:
+  addresses:                                                                  
+  - 10.2.0.234-10.2.0.239
+---
+# Network object configuration (Required when using VLANs)
+# Red Hat Doco Validated:
+# https://docs.redhat.com/en/documentation/openshift_container_platform/4.21/html-single/ingress_and_load_balancing/index#nw-metallb-configure-address-pool-vlan_configure-metallb-address-pools
+apiVersion: operator.openshift.io/v1
+kind: Network
+metadata:
+  name: cluster
+spec:
+  defaultNetwork:
+    type: OVNKubernetes
+    ovnKubernetesConfig:
+      gatewayConfig:
+        ipForwarding: Global
+---
+# BGPAdvertisement object (When MetalLB operates in L3 BGP Mode)
+# Red Hat Doco Validated:
+# https://docs.redhat.com/en/documentation/openshift_container_platform/4.21/html-single/ingress_and_load_balancing/index#nw-metallb-advertise-a-basic-address-pool-configuration-bgp_about-advertising-ip-address-pool
+# https://docs.redhat.com/en/documentation/openshift_container_platform/4.21/html-single/ingress_and_load_balancing/index#nw-metallb-bgp-peer-vrf_configure-metallb-bgp-peers
+apiVersion: metallb.io/v1beta1
+kind: BGPAdvertisement                                                        
+metadata:       
+  name: bgpad-tti
+  namespace: metallb-system                                                   
+spec:
+  ipAddressPools:                                                             
+    - ippool-tti
+  peers:
+    - bgppeer-tti
+  nodeSelectors:
+    - matchLabels:
+        # advsetise cp only:
+        node-role.kubernetes.io/control-plane: ""
+        # advertise all nodes:
+        #node-role.kubernetes.io/worker: ""
+        #doc example
+        #egress-service.k8s.ovn.org/test-server1: ""
+---
+# BGPeer object (When MetalLB operates in L3 BGP Mode)
+# Red Hat Doco Validated:
+# https://docs.redhat.com/en/documentation/openshift_container_platform/4.21/html-single/ingress_and_load_balancing/index#nw-metallb-configure-bgppeer_configure-metallb-bgp-peers
+apiVersion: metallb.io/v1beta2
+kind: BGPPeer
+metadata:
+  name: bgppeer-tti
+  namespace: metallb-system                                                   
+spec:
+  myASN: 65230
+  peerASN: 65148
+  peerAddress: 10.2.0.148                                                     
+  # For VRFs we need to specify the correct routing table, the nmstate vrf sub-object we defined in the nncp.
+  # Red Hat Doco Validated:
+  # https://docs.redhat.com/en/documentation/openshift_container_platform/4.21/html-single/ingress_and_load_balancing/index#nw-metallb-bgp-peer-vrf_configure-metallb-bgp-peers
+  # vrf: vrf100 # USE ONLY IF THE BGP PEERING TCP/179 HOUSEKEEPING SESSION IS DONE OVER THE VRF ITSELF. 
+  # peerAddress: 10.2.100.254 << IP of bgp peer if accessed via vrf in lieu of 10.2.0.148
+
+  # spec.routerID: Optional: Specifies the router ID to advertise to the BGP peer.
+  # If you specify this parameter, you must specify the same value in every BGP peer custom resource that you add.
+  # note: Red Hat doco suggests this can be what looks like an IP address
+  # routerID: 10.10.10.10
+---
+# FRRConfiguration (to use the frr daemon for advanced routing)
+# https://docs.redhat.com/en/documentation/openshift_container_platform/4.21/html-single/ingress_and_load_balancing/index#nw-metallb-configuring-frr-k8s-configurations_configure-metallb-frr-k8s
+apiVersion: frrk8s.metallb.io/v1beta1
+kind: FRRConfiguration
+metadata:
+ name: frrconfig-tti
+ namespace: metallb-system
+spec:
+ bgp:
+   routers:
+   - asn: 65230
+     neighbors:
+     - address: 10.2.0.148
+       asn: 65148
+       toReceive:
+        allowed:
+            mode: all

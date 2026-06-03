@@ -1,0 +1,31 @@
+apiVersion: nmstate.io/v1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: nncp-vlan100-vrf
+spec:
+  nodeSelector: {}
+  desiredState:
+    interfaces:
+      # VLAN interface on physical NIC
+      - name: vlan100
+        type: vlan
+        state: up
+        vlan:
+          base-iface: enp1s0
+          id: 100
+        ipv4:
+          enabled: true
+          dhcp: false
+          address:
+            - ip: 10.2.100.254
+              prefix-length: 24
+            - ip: 10.2.100.90
+              prefix-length: 24
+      # VRF (must come after br100 logically)
+      - name: vrf100
+        type: vrf
+        state: up
+        vrf:
+          port:
+            - vlan100
+          route-table-id: 100

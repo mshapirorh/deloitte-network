@@ -1,0 +1,24 @@
+# Validate with Red Hat documentation:
+# https://docs.redhat.com/en/documentation/openshift_container_platform/4.21/html/virtualization/networking#virt-attaching-vm-to-secondary-udn_virt-connecting-vm-to-secondary-udn
+---
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: vm-windows10
+  namespace: t1ns1
+spec:
+  template:
+    spec:
+      domain:
+        devices:
+          interfaces:
+            # Interface name:
+            - name: secondary_localnet
+              bridge: {}
+      networks:
+      # spec.template.spec.networks.name specifies the name of the network.
+      # This value must match the value of the spec.template.spec.domain.devices.interfaces.name field.
+      - name: secondary_localnet
+        multus:
+          # spec.template.spec.networks.multus.networkName specifies the name of the localnet ClusterUserDefinedNetwork object that you previously created. (defined in both the nncp and cudn)
+          networkName: cudn-ipam-off

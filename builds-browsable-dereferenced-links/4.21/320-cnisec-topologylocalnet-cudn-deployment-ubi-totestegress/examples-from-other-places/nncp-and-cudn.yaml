@@ -1,0 +1,22 @@
+kind: NNCP
+spec:
+  desiredState:
+    ovn:
+      bridge-mappings:
+      - bridge: br-ex
+        localnet: my-vlan-100
+        state: present
+---
+kind: CUDN
+spec:
+  network:
+    topology: Localnet
+    localnet:
+      ipam:
+        mode: Disabled
+      physicalNetworkName: my-vlan-100 # has to match the localnet field in your NNCP
+      role: Secondary
+      vlan:
+        mode: Access
+        access:
+          id: 100

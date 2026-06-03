@@ -1,0 +1,24 @@
+# bash aliases to help use and test the yamls here
+# include this file with . ./aliases
+# aa allows modifying this file and immediately re-includes it
+alias aa="vi ./aliases; . ./aliases"
+
+# shorthand to apply yamls
+alias oa="oc apply -f "
+
+alias dn="./clean.sh"
+# Delete pod
+# alias dn="oc delete pod `oc get pods|grep ubi|cut -d' ' -f1`"
+# Watch the application of the yaml until it succeeds
+# alias wn="time (echo 'Monitoring with oc get pods | grep ubi' ; while ! oc get pods | grep ubi | grep -q Running; do oc get pods; sleep 1; done ; oc get pods -owide|grep ubipod ; echo Finished successfully)"
+
+#alias rnb='oc rsh `oc get pods|grep ubi|cut -d" " -f1` ip -br link'
+#alias rnc='set -x ; oc rsh `oc get pods|grep ubi|cut -d" " -f1` curl -m5 http://10.2.100.1 ; set +x'
+#alias rnm='oc rsh `oc get pods|grep ubi|cut -d" " -f1`'
+#alias podi='set -x ; oc get pod `oc get pods|grep ubi|cut -d" " -f1` -o yaml |grep -a5 interface ; set +x'
+# Breakpoint 1: namespace and udn:
+#alias rn="rna ; rnb ; rnc"
+# Breakpoint 2: ubi pod
+#alias z1="oc delete project t1ns1 ; oa 1-ns-udn3p.yaml ; oc project t1ns1 ; oc projects|grep '*' ; nad"
+alias z1="oa 10-metallb-ipadpool-bgppeer-bgpad.yaml"
+alias zh="z1"

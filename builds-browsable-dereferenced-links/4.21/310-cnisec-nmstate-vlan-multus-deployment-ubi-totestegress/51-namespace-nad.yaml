@@ -1,0 +1,48 @@
+# Verified against Red Hat documentation:
+# docs.openshift.com/container-platform/4.14/virt/vm_networking/virt-connecting-vm-to-linux-bridge.html
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: t1ns1
+---
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: nad-bridge-vlan-100
+  namespace: t1ns1
+spec:
+  # This is a setup to test isolated VLAN100 traffic. 
+  # Because we're testing VRF with L3 routing, we need two subnets on VLAN100 for routing to occur between them
+  # The subnet on the externally facing bridge going to the NIC is 10.2.100.0 in this example
+  # The subnet the below NAD will place pods on is 10.2.101.0 in this example
+  # Both are on vlan100. NNCP needs to match.
+  #
+  config: |
+    {
+      "name": "nad-bridge-vlan-100",
+      "cniVersion": "0.3.1",
+      "type": "bridge",
+      "bridge": "bridge-100int",
+      "macspoofchk": false,
+      "disableContainerInterface": false,
+      "portIsolation": false,
+      "preserveDefaultVlan": false,
+      "ipam": {
+        "type": "host-local",
+        "subnet": "10.2.101.0/24",
+        "rangeStart": "10.2.101.140",
+        "rangeEnd": "10.2.101.150",
+        "gateway": "10.2.101.1",
+        "routes": [
+          {
+            "dst": "10.2.100.0/24",
+            "gw": "10.2.101.101"
+          }
+        ]
+      }
+    }
+  # Optional: Indicates whether the VM connects to the bridge through the default VLAN. The default value is true.
+#      "ipam": {
+#        "type": "host-local", "subnet": "10.2.101.0/24", "rangeStart": "10.2.101.140", "rangeEnd": "10.2.101.150"
+#      } 

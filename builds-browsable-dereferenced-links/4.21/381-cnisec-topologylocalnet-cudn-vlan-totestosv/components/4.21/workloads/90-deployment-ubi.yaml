@@ -1,0 +1,28 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dp-t1ns1-ubipod
+  namespace: t1ns1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: app-ubipod
+  template:
+    metadata:
+      labels:
+        app: app-ubipod
+        # Uncomment to attach a cudn to this deployment's pod:
+        # annotations:
+        #   k8s.v1.cni.cncf.io/networks: cudn-100
+    spec:
+      nodeSelector:
+        # Uncomment to pin to a node:
+        # kubernetes.io/hostname: v23c1
+        # Uncomment to pin to a control plane node:
+        # node-role.kubernetes.io/control-plane: ""
+      containers:
+        - name: container-ubipod
+          image: registry.access.redhat.com/ubi9/ubi
+          command: ["sleep", "infinity"]

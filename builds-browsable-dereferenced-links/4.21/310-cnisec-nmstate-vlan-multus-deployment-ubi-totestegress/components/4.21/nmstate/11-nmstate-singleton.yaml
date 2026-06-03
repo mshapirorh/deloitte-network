@@ -1,0 +1,6 @@
+# The singleton can only be created after the CRD is in place.
+---
+apiVersion: nmstate.io/v1
+kind: NMState
+metadata:
+  name: nmstate

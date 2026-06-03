@@ -1,0 +1,29 @@
+apiVersion: nmstate.io/v1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: nncp-bridgemapping-localnet
+spec:
+  nodeSelector: {}
+  desiredState:
+    interfaces:
+      # VLAN interface on physical NIC
+#      - name: vlan100
+#        type: vlan
+#        state: up
+#        vlan:
+#         base-iface: enp1s0
+#          id: 100
+        # ipv4:
+        #   enabled: true
+        #   dhcp: false
+        #   address:
+        #     - ip: 10.2.100.101
+        #      prefix-length: 24
+  # Map the vlan to the node external bridge
+  # This is a short-circuit between pod OVN and a physical medium
+  # It shuoldn't be required for L3 routed configurations that pass via a vrf
+    ovn:
+      bridge-mappings:
+      - bridge: br-ex
+        localnet: localnet-trunk
+        state: present
